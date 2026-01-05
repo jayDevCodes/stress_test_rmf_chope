@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# NOTE: Test with finishing request set to [nothing]
+# NOTE: Test with finishing request set to [nothing], AND remove [supplies] as a parking spot
 # Initialize robot positions
 ros2 run rmf_demos_tasks dispatch_go_to_place -p tinyRobot1_charger -F tinyRobot -R tinyRobot1 --use_sim_time
 ros2 run rmf_demos_tasks dispatch_go_to_place -p tinyRobot2_charger -F tinyRobot -R tinyRobot2 --use_sim_time
@@ -18,17 +18,13 @@ if [ $ret -ne 0 ]; then
 fi
 
 
-# Start a patrol ask for tinyRobot1 to [hardware_2] and tinyRobot2 to [pantry]
-ros2 run rmf_demos_tasks dispatch_patrol -F tinyRobot -R tinyRobot1 -p hardware_2  --use_sim_time
-ros2 run rmf_demos_tasks dispatch_patrol -F tinyRobot -R tinyRobot2 -p pantry  --use_sim_time
-sleep 10
+# Send tinyRobot1 to [tinyRobot2_charger]. It should be allocated to its current position [tinyRobot1_charger],
+# since it is a valid waitspot.
+ros2 run rmf_demos_tasks dispatch_go_to_place -p tinyRobot2_charger  -F tinyRobot -R tinyRobot1 --use_sim_time
+sleep 5
 
-# Trigger the emergency signal. Both robots should find a free spot to park.
-ros2 topic pub /emergency_signal rmf_fleet_msgs/msg/EmergencySignal "{\"is_emergency\": true, \"fleet_names\": []}" --once --qos-reliability reliable --qos-durability transient_local
-sleep 20
-
-# Switch off the emergency signal. both robots should resume their tasks.
-ros2 topic pub /emergency_signal rmf_fleet_msgs/msg/EmergencySignal "{\"is_emergency\": false, \"fleet_names\": []}" --once --qos-reliability reliable --qos-durability transient_local
+# Send tinyRobot2 to [supplies] to free up space for tinyRobot1. Both robots should complete their tasks successfully.
+ros2 run rmf_demos_tasks dispatch_go_to_place -p supplies  -F tinyRobot -R tinyRobot2 --use_sim_time
 ros2 run rmf_demos_tasks wait_for_task_complete -F tinyRobot -R tinyRobot1 --timeout 500
 ret=$?
 if [ $ret -ne 0 ]; then
